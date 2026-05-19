@@ -13,16 +13,24 @@
 - **Existing asset:** `App.jsx` is a React/Vite "MortgageOne Advisor" client-facing
   calculator (loan comparison, fees, amortization, rent-vs-own, cost-of-waiting).
 
-## Core Themeday model — TO BE COMPLETED
-> The Spring 2026 Summit Workbook (The CORE Training) defines the specific
-> Themeday schedule and call scripts. It could not be read automatically
-> (different SharePoint tenant, auth-walled). Fill this in once the workbook
-> content is provided. Capture per theme: which day, target audience/segment,
-> call objective, script/talk track, email template, SMS template, follow-up task.
+## CORE Theme Day model — VERIFIED (source: EA Manual + PAS SOP v3.0, Team Lamm Drive)
+CORE Theme Day calls: **minimum 1 hr/day, calendar-blocked Green (Revenue)**.
+Full playbook with scripts/templates: `docs/themeday-playbook.md`.
 
-| Day | Theme | Who to call (SF segment) | Call objective | Email | SMS | Follow-up task |
-|-----|-------|--------------------------|----------------|-------|-----|----------------|
-| _TBD_ | _TBD_ | _TBD_ | _TBD_ | _TBD_ | _TBD_ | _TBD_ |
+| Day | Theme | Who to call (Salesforce segment) | Objective |
+|-----|-------|----------------------------------|-----------|
+| Mon | **Power Hour** | All Realtors / referral partners | Revenue-generating realtor prospecting |
+| Tue | **Update Calls** | Clients + buyers' agents currently in process (SF report: *Tuesday – Pipeline & Update Calls*; + manual HELOC/Reverse) | Status update to all parties on active files |
+| Wed | **Pre-Approval Calls** | Pre-approved clients (home shopping) | Keep pre-approved buyers engaged; 7-day check-in SLA |
+| Thu | **Past Client Calls** | Past clients. 1st Thu = Annual Reviews (prior-year closings, same month) · Prev-month closings · Top 50 PCs · HomeBot active | Retention / repeat / referral (CCR/PCR) |
+| Fri | **Whale / VIP Calls** | Top VIPs, referral partners, whales (source: *Whale Form – Spring 2026.xlsx*) | Deepen highest-value relationships |
+
+Key facts:
+- CRM is **Jungo (on Salesforce)** + Encompass + Floify + Mortgage Coach. Calls dialed via **PhoneBurner**.
+- Tuesday list is built from Chris's Encompass "Tuesday Pipeline Print" view, cross-checked vs Salesforce report *Tuesday – Pipeline & Update Calls*, then uploaded to PhoneBurner.
+- Jungo stages: Lead → Lead Contacted → Nurturing → Pre-Qualified → Pre-Approved → In Contract → Closed.
+- Notes must hit Jungo/Salesforce **same business day**; "last touch" note field is the system of record.
+- Autonomy decision: **AI drafts; human approves** all emails/SMS/tasks before they fire.
 
 ## Integration landscape (verified in this environment)
 - **PhoneBurner:** REST API, OAuth2, base `https://www.phoneburner.com/rest/1/`.
