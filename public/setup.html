@@ -49,7 +49,14 @@
     <li>You've already generated the Personal Access Token.</li>
     <li><strong>Add the token to Vercel:</strong> Vercel project → Settings → Environment Variables → add <code>PHONEBURNER_ACCESS_TOKEN</code> = your token. Save, then click "Redeploy" on the latest deployment.</li>
     <li><strong>Whitelist the egress.</strong> When I just tried the token from outside, PhoneBurner returned <code>"Host not in allowlist"</code> — your account restricts which IPs may hit the API. In PhoneBurner My Account / Integrations, either turn off the API IP allowlist or add Vercel's IP range. The simplest: turn it off (the Bearer token is still the secret).</li>
-    <li><strong>Webhook:</strong> Settings → Integrations → <strong>Webhooks</strong> → add a webhook for the "Call Completed" event pointing at <code id="webhook-url">/api/webhooks/phoneburner</code> on this host.</li>
+    <li><strong>Webhooks (three URLs to paste):</strong> Settings → Integrations → Webhooks → fill the three fields:
+      <ul style="margin-top:6px">
+        <li><strong>Call End</strong> → <code id="wh-call-end">/api/webhooks/phoneburner/call-end</code> &nbsp;<em>(the important one — disposition, transcript, recording)</em></li>
+        <li><strong>Call Begin</strong> → <code id="wh-call-begin">/api/webhooks/phoneburner/call-begin</code></li>
+        <li><strong>Contact Displayed</strong> → <code id="wh-contact-displayed">/api/webhooks/phoneburner/contact-displayed</code></li>
+      </ul>
+      Click "Save Changes" at the bottom.
+    </li>
     <li>After all that, hit <a href="/api/diagnostics/pb">/api/diagnostics/pb</a> — it should return your member identity and folder list.</li>
   </ol>
 </div>
@@ -81,7 +88,10 @@ MortgageOne Inc · NMLS #898812 · Chris Lamm, Branch Manager · NMLS #209221 ·
 <script>
   // Make the URLs absolute so people can copy/paste them into PB / SF.
   const host = location.origin;
-  document.getElementById("webhook-url").textContent = host + "/api/webhooks/phoneburner";
+  for (const id of ["wh-call-end", "wh-call-begin", "wh-contact-displayed"]) {
+    const el = document.getElementById(id);
+    if (el) el.textContent = host + el.textContent;
+  }
   document.getElementById("sf-callback").textContent = host + "/api/oauth/salesforce/callback";
 </script>
 </body>
