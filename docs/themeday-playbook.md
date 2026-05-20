@@ -163,15 +163,34 @@ route to Chris directly. Log relationship notes to last-touch field.
 
 | Playbook step | System | Trigger / mechanism |
 |---|---|---|
-| Build today's list | Salesforce (Jungo) | Scheduled query per Theme Day segment |
-| Create dial set | PhoneBurner API | `POST dialsession` with contact array + custom fields |
-| Stage email/SMS | Draft queue | AI fills template → **human approves** → send |
-| Run calls | PhoneBurner | Manual (SF record pops live — already working) |
-| Capture outcome | PhoneBurner webhook | Call disposition → recording URL |
-| Transcribe | Transcription svc | Whisper/Deepgram/AssemblyAI (PhoneBurner has no native transcript) |
-| Summarize → log | Claude + Salesforce | Summary → "last touch" field + logged call activity |
-| Set tasks | Salesforce | Follow-up tasks parsed from call, per day's logic above |
+| Build today's list | Salesforce (Jungo) | Scheduled query per Theme Day segment (see `automation/themedays/*.js`) |
+| Create dial set | PhoneBurner API | `POST dialsession` with contact array + custom_data carrying sf_id + theme |
+| Stage email/SMS | Draft queue | Template rendered with live record → MS Graph draft → **human approves** → send |
+| Run calls | PhoneBurner | Manual (browser dialer — SF record pops live) |
+| Capture outcome | PhoneBurner webhook | 3 events: Call Begin / Call End / Contact Displayed (Call End carries disposition + transcript + recording) |
+| Transcribe | PhoneBurner native | Transcripts now arrive in the webhook payload — no Whisper/Deepgram needed |
+| Summarize → log | Claude API (Haiku) → Salesforce | `automation/summarizer.js` extracts snippet + follow-up tasks from transcript; falls back to rule scanner without `ANTHROPIC_API_KEY` |
+| Set tasks | Salesforce | Follow-up Tasks parsed from call + per-day logic; EOD enforcement creates Tasks for any missed last-touch |
 
 **Approval gate:** every outbound email/SMS and every AI-created task is queued
-for one-click human review before it fires. Nothing auto-sends until explicitly
-promoted out of "draft, I approve" mode.
+for one-click human review before it fires. v0.5: all assignee-bound drafts
+route to Chris first with a banner showing the intended recipient.
+
+## Where it runs
+
+Deployed to **Vercel** as a Vite SPA + 9 serverless functions:
+
+| Function | Purpose |
+|---|---|
+| `/api/health` | Env / readiness JSON |
+| `/api/selftest` | Runs 7 in-memory smoke checks; returns 7/7 when green |
+| `/api/briefing` | Mobile-friendly morning dashboard at `/briefing` |
+| `/api/preview` | Renders any template (`?type=checklist\|preapproval\|realtor-vm\|past-client\|whale`) |
+| `/api/diagnostics` | Live `?service=sf` or `?service=pb` whoami |
+| `/api/cron` | Scheduled jobs by `?job=` — invoked by Vercel Cron (Mon 14:00, Wed 15:30, Wed EOD 01:00 next day, Thu 15:30, Fri 15:30 PT) |
+| `/api/webhooks/phoneburner` | 3 PB events by `?event=call-end\|call-begin\|contact-displayed`. Full raw payload logged as `PB_CALL_END_RAW` etc. |
+| `/api/oauth/salesforce/start` + `callback` | Captures SF refresh token from Connected App |
+
+Static dashboard at `/setup.html`. PhoneBurner webhooks point at the
+nice-URL form (`/api/webhooks/phoneburner/call-end`) which Vercel rewrites
+to the query-param handler.

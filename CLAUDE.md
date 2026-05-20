@@ -62,6 +62,22 @@ API later when budget allows.
 ## PhoneBurner capabilities (updated)
 - PhoneBurner now has **native recording + transcription** — we do NOT need
   Whisper/Deepgram bolted on. Webhook payload includes `transcript`.
+- Auth: **Personal Access Token** (Settings → Integrations → Personal Access
+  Tokens). Bearer auth. No OAuth dance for single-operator install.
+- **API IP allowlist** is on by default in Chris's PB account — disable it
+  (or whitelist Vercel egress) before the API can be hit from the deployment.
+- Webhook UI exposes 3 separate URL fields: Call Begin, Call End,
+  Contact Displayed. Call End is the workhorse (disposition + transcript +
+  recording). All 3 wired in the deployment.
+
+## Deployment
+- **Vercel** project `mortgage` (team `proreversemortgage-8214s-projects`),
+  auto-deploys from `claude/phone-call-automation-j4iVv` branch.
+- Hobby plan caps at **12 serverless functions** — we use 9. URL routing via
+  `vercel.json` rewrites so PhoneBurner sees clean paths.
+- Cron schedule (PT): Mon 14:00 (realtor list), Wed 15:30 (PA kickoff),
+  Wed 17:00 (EOD enforcement), Thu 15:30 (past clients), Fri 15:30 (whale).
+- Public dashboard: `/setup.html`. Morning briefing: `/briefing`. Self-test: `/api/selftest`.
 
 ## Working agreement
 - Active dev branch: `claude/phone-call-automation-j4iVv`.
