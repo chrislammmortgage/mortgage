@@ -33,19 +33,20 @@ Key facts:
 - Autonomy decision: **AI drafts; human approves** all emails/SMS/tasks before they fire.
 
 ## Integration landscape (verified in this environment)
-- **PhoneBurner:** REST API, OAuth2, base `https://www.phoneburner.com/rest/1/`.
-  User has API access. Relevant endpoints: contacts, members, folders, content,
-  `dialsession` (build a session from a contact array), call results, and
-  webhook/callback on call disposition.
-- **Salesforce:** Reachable here ONLY via MCP with two operations exposed —
-  `salesforce_find_record` and `salesforce_create_note`. No native call-log /
-  task / custom-field write is exposed through that MCP. The Salesforce CLI
-  (`sf`) referenced by the user is on the user's own machine, not this container.
-- **Email/Calendar:** Microsoft Outlook + Google Calendar MCP tools available
-  (draft/send email, create events). Salesforce note creation available.
-- **Network:** This hosted environment has a restrictive outbound policy
-  (generic web fetches 403). A live automation that calls PhoneBurner/Salesforce
-  needs to run where it has network + credentials (user machine or a server).
+- **PhoneBurner:** Used in-browser by Chris for dialing. The automation pushes
+  pre-built dial sessions via REST API (OAuth2, base
+  `https://www.phoneburner.com/rest/1/`) so each Theme Day list shows up ready
+  to dial when he logs in. Webhook on call disposition still flows back to our
+  service for SF logging.
+- **Salesforce:** Production access is via a Connected App (jsforce + OAuth2
+  refresh token). **Do not use the Zapier-backed `salesforce_find_record` MCP
+  for anything that matters** — it's a different org/sandbox and gives a false
+  signal of connectivity.
+- **Email:** Microsoft Graph (Outlook) via a registered Entra ID app — direct
+  Graph API, not Zapier. Drafts saved to Chris's actual mailbox.
+- **Schema discovery:** `automation/scripts/discover-schema.js` introspects the
+  org once creds are pasted, surfaces the real Contact custom-field names and
+  picklist values (Group__c, Stage__c, Last_Touch__c, etc.) so we don't guess.
 
 ## Realtor identification (verified per user)
 - Realtors live in Salesforce/Jungo identified by **`Group__c`** (values like

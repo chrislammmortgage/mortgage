@@ -80,10 +80,31 @@ Field API names are configurable via `.env`. Defaults:
 - `Rotation_Pool__c` (Picklist: TOP10, POOL20)
 
 ## Webhook URL exposure
-The PhoneBurner webhook needs a publicly reachable URL. Options:
-- **Local dev:** `ngrok http 3001` or `cloudflared tunnel`.
-- **Prod:** deploy `automation/server.js` to Render / Fly.io / Railway / a $5
-  VPS. Keep `automation/cron.js` running on the same host.
+PhoneBurner runs in your browser for dialing. The dispositions webhook needs a
+publicly reachable URL so we can log call outcomes back to Salesforce.
+- **Local dev:** `ngrok http 3001` (or `cloudflared tunnel`) — fastest.
+- **Prod:** deploy `automation/server.js` to Render / Fly.io / Railway / Vercel
+  or a $5 VPS. Keep `automation/cron.js` running on the same host.
+
+## Schema discovery (run this BEFORE the first kickoff)
+Once your Salesforce Connected App creds are in `.env`:
+```bash
+node automation/scripts/discover-schema.js
+```
+Inspects the Contact object, prints custom-field API names, picklist values
+for Group__c / Stage__c / RecordType, and writes `automation/.schema.json`
+with the resolved field map. If any default in `.env.example` doesn't match
+your org, this is where you'll see it — override in `.env` and re-run.
+
+## Tomorrow morning (Wednesday) — first live run checklist
+- [ ] Paste SF Connected App creds in `.env` (SF_CLIENT_ID/SECRET/REFRESH_TOKEN/INSTANCE_URL).
+- [ ] Paste PhoneBurner OAuth creds (CLIENT_ID/SECRET/REFRESH_TOKEN).
+- [ ] Paste Microsoft Graph creds (TENANT_ID/CLIENT_ID/CLIENT_SECRET).
+- [ ] `npm install && node automation/scripts/discover-schema.js` — confirm fields.
+- [ ] Keep `DRY_RUN=true` for first dry pass — see exactly what would happen.
+- [ ] `npm run kickoff:preapproval` — review the 10-PA list it prints.
+- [ ] When satisfied: `DRY_RUN=false` and re-run. Drafts land in your Outlook,
+      PhoneBurner gets the "WED Pre-Approval" dial set, you dial in browser.
 
 ## What's not built yet (intentionally — ship the high-pressure parts first)
 - **Thursday clients with move-detection** — needs USPS NCOA (PAF + license,

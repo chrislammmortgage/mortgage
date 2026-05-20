@@ -9,9 +9,11 @@
     "preview": "vite preview",
     "automation:server": "node automation/server.js",
     "automation:cron": "node automation/cron.js",
+    "discover:schema": "node automation/scripts/discover-schema.js",
     "kickoff:preapproval": "node automation/scripts/run-preapproval-kickoff.js",
     "kickoff:realtors": "node automation/scripts/run-monday-realtors.js",
-    "eod:enforce": "node automation/scripts/run-eod-enforcement.js"
+    "eod:enforce": "node automation/scripts/run-eod-enforcement.js",
+    "smoke": "node automation/test/smoke.js"
   },
   "dependencies": {
     "react": "^18.2.0",
