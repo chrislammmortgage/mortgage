@@ -3,12 +3,13 @@
 import { runWednesdayPreApprovalKickoff, runEodEnforcement }
   from "../automation/themedays/wednesday-preapprovals.js";
 import { buildMondayRealtorList } from "../automation/themedays/monday-realtors.js";
+import { runThursdayPastClientKickoff } from "../automation/themedays/thursday-clients.js";
+import { runFridayWhaleKickoff } from "../automation/themedays/friday-whales.js";
 import { handleDisposition } from "../automation/webhooks/disposition.js";
 
 export default async function handler(req, res) {
   const results = [];
 
-  // Stubs
   const fakePA = (assignedTo) => [{
     Id: `003fake${assignedTo}1`, Name: "Maria Gutierrez", FirstName: "Maria", LastName: "Gutierrez",
     Phone: "+15305551001", MobilePhone: "+15305551001", Email: "maria@example.com",
@@ -16,11 +17,11 @@ export default async function handler(req, res) {
     Active_Realtor__c: { Name: "Jane Smith", Phone: "+15305552002" },
     Loan_Officer__c: { Email: assignedTo },
   }];
-  const fakeRealtors = [
-    { Id: "003r1", Name: "Jane Smith", FirstName: "Jane", LastName: "Smith",
-      MobilePhone: "5305552002", Email: "jane@example.com",
-      MailingCity: "Redding", MailingState: "CA", Group__c: "Top Realtor" },
-  ];
+  const fakeRealtors = [{
+    Id: "003r1", Name: "Jane Smith", FirstName: "Jane", LastName: "Smith",
+    MobilePhone: "5305552002", Email: "jane@example.com",
+    MailingCity: "Redding", MailingState: "CA", Group__c: "Top Realtor",
+  }];
   const sfDeps = {
     findRecentPreApprovals: async ({ assignedTo }) => fakePA(assignedTo || "chris@x.test"),
     findRealtorsWithReferralsLast12Mo: async () => ({ strategy: "Contact+Group=Realtor", records: fakeRealtors }),
@@ -35,6 +36,7 @@ export default async function handler(req, res) {
     enrichRealtorPublicProduction: async () => ({ source: "mock", deals_12mo: 24, volume_12mo: 12e6 }),
     verifyPhone: async (p) => ({ valid: !!p, type: "mobile", e164: p }),
     verifyEmail: async (e) => ({ valid: !!e, result: "valid" }),
+    verifyAddress: async ({ street }) => ({ valid: true, vacant: /Empty/.test(street || "") }),
   };
   const pbDeps = { createDialSession: async ({ contacts }) =>
     ({ dialsession_id: `t-${Date.now()}`, contact_ids: contacts.map((_,i) => `c${i}`) }) };
@@ -51,18 +53,46 @@ export default async function handler(req, res) {
   await check("Wed PA kickoff", async () => {
     emails.length = 0;
     const r = await runWednesdayPreApprovalKickoff({ ...sfDeps, ...pbDeps, ...mailerDeps });
-    return { drafts: emails.length, dialsession: r.session?.dialsession_id };
+    return { chrisCount: r.chrisCount, drafts: emails.length, dialsession: r.session?.dialsession_id };
   });
   await check("EOD enforcement", async () => {
     const r = await runEodEnforcement(
-      { checklistRows: [{ sfId: "x", contactName: "Test", phone: "+1555", ownerEmail: "a@b" }] },
-      sfDeps
-    );
+      { checklistRows: [{ sfId: "x", contactName: "Test", phone: "+1555", ownerEmail: "a@b" }] }, sfDeps);
     return { missed: r.missed.length };
   });
   await check("Monday realtor list", async () => {
     const r = await buildMondayRealtorList({ rotationWeek: 0 }, { ...sfDeps, ...enrDeps, ...pbDeps });
     return { final: r.finalList.length };
+  });
+  await check("Thursday past-client", async () => {
+    const fakeClients = {
+      segment: "prev_month_closings",
+      records: [
+        { Id: "pc1", Name: "Alice King", FirstName: "Alice", LastName: "King",
+          MobilePhone: "+15305553001", Email: "alice@example.com",
+          MailingStreet: "100 Main St", MailingCity: "Redding", MailingState: "CA",
+          MailingPostalCode: "96001", Closing_Date__c: "2025-04-15", Last_Touch__c: null },
+        { Id: "pc2", Name: "Bob Vacant", FirstName: "Bob", LastName: "Vacant",
+          MobilePhone: "+15305553002", Email: "bob@example.com",
+          MailingStreet: "999 Empty Ln", MailingCity: "Redding", MailingState: "CA",
+          MailingPostalCode: "96001", Closing_Date__c: "2025-04-20", Last_Touch__c: null },
+      ],
+    };
+    const r = await runThursdayPastClientKickoff({
+      findPastClientsForThursday: async () => fakeClients,
+      verifyPhone: enrDeps.verifyPhone,
+      verifyAddress: enrDeps.verifyAddress,
+      createDialSession: pbDeps.createDialSession,
+    });
+    return { segment: r.segment, dialable: r.dialable, flagged: r.flagged.length };
+  });
+  await check("Friday whale", async () => {
+    const r = await runFridayWhaleKickoff({}, {
+      soql: async () => [{ Id: "w1", Name: "VIP Partner", FirstName: "VIP", LastName: "Partner",
+        Email: "vip@example.com", MobilePhone: "+15305554001", Last_Touch__c: null }],
+      createDialSession: pbDeps.createDialSession,
+    });
+    return { count: r.count };
   });
   await check("Disposition: Connected", async () => {
     const r = await handleDisposition({
