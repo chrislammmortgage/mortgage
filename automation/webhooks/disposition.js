@@ -1,7 +1,7 @@
 import { log, config } from "../config.js";
 import { parseWebhook } from "../phoneburner.js";
-import { updateLastTouch, createTask, createNote } from "../salesforce.js";
-import { sendOrDraft } from "../email.js";
+import * as sf from "../salesforce.js";
+import * as mailer from "../email.js";
 import { realtorVmSms, realtorVmEmail } from "../templates/realtor-vm.js";
 import { preApprovalSms, preApprovalEmail } from "../templates/preapproval.js";
 
@@ -12,7 +12,11 @@ import { preApprovalSms, preApprovalEmail } from "../templates/preapproval.js";
  *  - Bad Number → flag SF and skip future dials.
  *  - Easy-button events (sms.send / email.send) → fire the pre-staged content.
  */
-export async function handleDisposition(payload) {
+export async function handleDisposition(payload, deps = {}) {
+  const { updateLastTouch = sf.updateLastTouch,
+          createTask = sf.createTask,
+          createNote = sf.createNote,
+          sendOrDraft = mailer.sendOrDraft } = deps;
   const ev = parseWebhook(payload);
   log.info({ event: ev.event, dispo: ev.disposition, sfId: ev.sfId }, "disposition received");
 

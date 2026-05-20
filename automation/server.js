@@ -11,7 +11,7 @@ app.get("/health", (_req, res) => res.json({ ok: true, dryRun: config.dryRun }))
 // PhoneBurner disposition webhook
 app.post("/webhooks/phoneburner", async (req, res) => {
   try {
-    const result = await handleDisposition(req.body);
+    const result = await handleDisposition(req.body, {});
     res.json(result);
   } catch (e) {
     log.error({ err: e.message }, "webhook error");

@@ -1,11 +1,7 @@
 import { config, log } from "../config.js";
-import {
-  findRecentPreApprovals,
-  checkLastTouchedToday,
-  createTask,
-} from "../salesforce.js";
-import { createDialSession } from "../phoneburner.js";
-import { sendOrDraft } from "../email.js";
+import * as sf from "../salesforce.js";
+import * as pb from "../phoneburner.js";
+import * as mailer from "../email.js";
 import { assigneeChecklistEmail } from "../templates/preapproval.js";
 
 /**
@@ -13,9 +9,16 @@ import { assigneeChecklistEmail } from "../templates/preapproval.js";
  *  - Pull 10 most recent PAs for Chris → load into PhoneBurner.
  *  - For each assignee (Zak/Jennifer/Toni), pull their 10 most recent PAs →
  *    email them a checklist at 8 AM.
+ *  - In v0.5 (ROUTE_TO_OWNER_ONLY=true) every assignee checklist is delivered
+ *    to Chris first with a banner identifying the original assignee.
  *  - Schedule EOD enforcement (run separately at 5 PM).
+ *
+ * @param {object} deps Optional dep injection for testing.
  */
-export async function runWednesdayPreApprovalKickoff() {
+export async function runWednesdayPreApprovalKickoff(deps = {}) {
+  const { findRecentPreApprovals = sf.findRecentPreApprovals,
+          createDialSession = pb.createDialSession,
+          sendOrDraft = mailer.sendOrDraft } = deps;
   log.info("Wednesday Pre-Approval — kickoff");
 
   // Chris's dial set
@@ -60,11 +63,17 @@ export async function runWednesdayPreApprovalKickoff() {
       sfId: c.Id,
     }));
     const msg = assigneeChecklistEmail({ assignee: email, rows });
-    const result = await sendOrDraft({
-      to: email, subject: msg.subject, html: msg.html, draft: true,
-    });
-    assigneeResults.push({ assignee: email, count: rows.length, result, rows });
-    log.info({ assignee: email, count: rows.length }, "assignee checklist drafted");
+    const to = config.routeToOwnerOnly ? config.owner.email : email;
+    const subject = config.routeToOwnerOnly
+      ? `[FOR ${email}] ${msg.subject}` : msg.subject;
+    const html = config.routeToOwnerOnly
+      ? `<div style="background:#fffde7;padding:8px 12px;border-left:4px solid #f9a825;font-family:system-ui">
+          <strong>v0.5 routing:</strong> this checklist is for <strong>${email}</strong>.
+          Forward when you're ready.
+        </div>${msg.html}` : msg.html;
+    const result = await sendOrDraft({ to, subject, html, draft: true });
+    assigneeResults.push({ assignee: email, routedTo: to, count: rows.length, result, rows });
+    log.info({ assignee: email, routedTo: to, count: rows.length }, "assignee checklist drafted");
   }
 
   return { session, chrisCount: chrisContacts.length, assigneeResults };
@@ -75,18 +84,21 @@ export async function runWednesdayPreApprovalKickoff() {
  *  For every PA in today's run, check if last-touch was updated today.
  *  If not → create a Salesforce Task on the assignee's queue.
  */
-export async function runEodEnforcement({ checklistRows }) {
+export async function runEodEnforcement({ checklistRows }, deps = {}) {
+  const { checkLastTouchedToday = sf.checkLastTouchedToday,
+          createTask = sf.createTask } = deps;
   log.info({ count: checklistRows.length }, "EOD enforcement — checking last-touch");
   const missed = [];
   for (const row of checklistRows) {
     const touched = await checkLastTouchedToday(row.sfId);
     if (!touched) {
+      const owner = config.routeToOwnerOnly ? config.owner.email : row.ownerEmail;
       await createTask({
         whoId: row.sfId,
         subject: `Pre-Approval touch missed: ${row.contactName}`,
         description: `Today's check-in didn't land in Salesforce. Call ${row.phone || "—"} and update last-touch.`,
         dueDate: new Date().toISOString().slice(0, 10),
-        ownerEmail: row.ownerEmail,
+        ownerEmail: owner,
       });
       missed.push(row);
     }

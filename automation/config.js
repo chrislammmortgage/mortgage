@@ -6,6 +6,7 @@ export const config = {
   tz: process.env.TZ || "America/Los_Angeles",
   port: parseInt(process.env.PORT || "3001", 10),
   dryRun: process.env.DRY_RUN === "true",
+  routeToOwnerOnly: process.env.ROUTE_TO_OWNER_ONLY !== "false",
   owner: {
     email: process.env.OWNER_EMAIL,
     name: process.env.OWNER_NAME || "Chris Lamm",
@@ -65,9 +66,11 @@ export const config = {
   approvalSecret: process.env.APPROVAL_SECRET || "dev-only-secret",
 };
 
+let prettyAvailable = false;
+try { await import("pino-pretty"); prettyAvailable = true; } catch {}
 export const log = pino({
   level: process.env.LOG_LEVEL || "info",
-  transport: config.env === "development"
+  transport: (config.env === "development" && prettyAvailable)
     ? { target: "pino-pretty", options: { colorize: true } }
     : undefined,
 });

@@ -1,12 +1,8 @@
 import pLimit from "p-limit";
 import { config, log } from "../config.js";
-import {
-  findRealtorsWithReferralsLast12Mo,
-  activeBusinessWithRealtor,
-  writeRealtorScoring,
-} from "../salesforce.js";
-import { enrichRealtorPublicProduction, verifyPhone, verifyEmail } from "../enrichment.js";
-import { createDialSession } from "../phoneburner.js";
+import * as sf from "../salesforce.js";
+import * as enr from "../enrichment.js";
+import * as pb from "../phoneburner.js";
 
 const TOP_N = 10;
 const POOL_N = 30;
@@ -21,7 +17,17 @@ const POOL_N = 30;
  *  5. Build a PhoneBurner dial session of 30 (top 10 + a 20-rotation slice).
  *  6. Write scoring back to Salesforce.
  */
-export async function buildMondayRealtorList({ rotationWeek = weekOfYear() } = {}) {
+export async function buildMondayRealtorList({ rotationWeek = weekOfYear() } = {}, deps = {}) {
+  const {
+    findRealtorsWithReferralsLast12Mo = sf.findRealtorsWithReferralsLast12Mo,
+    activeBusinessWithRealtor = sf.activeBusinessWithRealtor,
+    writeRealtorScoring = sf.writeRealtorScoring,
+    enrichRealtorPublicProduction = enr.enrichRealtorPublicProduction,
+    verifyPhone = enr.verifyPhone,
+    verifyEmail = enr.verifyEmail,
+    createDialSession = pb.createDialSession,
+  } = deps;
+
   log.info("Monday Power Hour — building realtor list");
 
   const { strategy, records } = await findRealtorsWithReferralsLast12Mo();
