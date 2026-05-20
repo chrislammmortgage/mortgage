@@ -4,6 +4,9 @@ import * as sf from "../salesforce.js";
 import * as mailer from "../email.js";
 import { realtorVmSms, realtorVmEmail } from "../templates/realtor-vm.js";
 import { preApprovalSms, preApprovalEmail } from "../templates/preapproval.js";
+import { pastClientSms, pastClientEmail } from "../templates/past-client.js";
+import { whaleSms, whaleEmail } from "../templates/whale.js";
+import { summarizeTranscript } from "../summarizer.js";
 
 /**
  * PhoneBurner posts here on call completion. Routing:
@@ -25,7 +28,9 @@ export async function handleDisposition(payload, deps = {}) {
     return { ok: false, reason: "no_sf_id" };
   }
 
-  const summary = ev.transcript ? summarizeFromTranscript(ev.transcript) : null;
+  // Prefer Anthropic if a key is set; fall back to rule-based scanner.
+  const aiSummary = ev.transcript ? await summarizeTranscript(ev.transcript) : null;
+  const summary = aiSummary || (ev.transcript ? summarizeFromTranscript(ev.transcript) : null);
 
   switch (normalize(ev.disposition)) {
     case "connected":
@@ -90,10 +95,10 @@ export async function handleDisposition(payload, deps = {}) {
 }
 
 function templateFor(theme) {
-  if (theme === "WED_PREAPPROVAL") {
-    return { sms: preApprovalSms, email: preApprovalEmail };
-  }
-  // default: realtor templates
+  if (theme === "WED_PREAPPROVAL") return { sms: preApprovalSms, email: preApprovalEmail };
+  if (theme === "THU_PAST_CLIENT") return { sms: pastClientSms, email: pastClientEmail };
+  if (theme === "FRI_WHALE")       return { sms: whaleSms,       email: whaleEmail };
+  // default: realtor (MON_REALTOR + TUE_UPDATE fallback)
   return { sms: realtorVmSms, email: realtorVmEmail };
 }
 

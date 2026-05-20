@@ -18,6 +18,8 @@ process.env.NODE_ENV = "test";
 const { runWednesdayPreApprovalKickoff, runEodEnforcement } =
   await import("../themedays/wednesday-preapprovals.js");
 const { buildMondayRealtorList } = await import("../themedays/monday-realtors.js");
+const { runThursdayPastClientKickoff } = await import("../themedays/thursday-clients.js");
+const { runFridayWhaleKickoff } = await import("../themedays/friday-whales.js");
 const { handleDisposition } = await import("../webhooks/disposition.js");
 
 // ─────────── Fake Salesforce records ───────────
@@ -156,6 +158,44 @@ await report("Webhook disposition — Connected", async () => {
   assert.equal(result.ok, true);
   assert.equal(result.action, "connected_logged");
   return { action: result.action };
+});
+
+await report("Thursday Past-Client — end to end", async () => {
+  const fakeClients = {
+    segment: "prev_month_closings",
+    records: [
+      { Id: "003pc1", Name: "Alice King", FirstName: "Alice", LastName: "King",
+        MobilePhone: "+15305553001", Email: "alice@example.com",
+        MailingStreet: "100 Main St", MailingCity: "Redding", MailingState: "CA",
+        MailingPostalCode: "96001", Closing_Date__c: "2025-04-15", Last_Touch__c: null },
+      { Id: "003pc2", Name: "Bob Vacant", FirstName: "Bob", LastName: "Vacant",
+        MobilePhone: "+15305553002", Email: "bob@example.com",
+        MailingStreet: "999 Empty Ln", MailingCity: "Redding", MailingState: "CA",
+        MailingPostalCode: "96001", Closing_Date__c: "2025-04-20", Last_Touch__c: null },
+    ],
+  };
+  const r = await runThursdayPastClientKickoff({
+    findPastClientsForThursday: async () => fakeClients,
+    verifyPhone: async (p) => ({ valid: true, type: "mobile", e164: p }),
+    verifyAddress: async ({ street }) => ({ valid: true, vacant: /Empty/.test(street) }),
+    createDialSession: async ({ contacts }) => ({ dialsession_id: "t-thu", contact_ids: contacts.map((_,i) => `c${i}`) }),
+  });
+  assert.equal(r.segment, "prev_month_closings");
+  assert.equal(r.dialable, 1, `expected 1 dialable, got ${r.dialable}`);
+  assert.equal(r.flagged.length, 1, "expected vacant address flagged");
+  return r;
+});
+
+await report("Friday Whale — end to end", async () => {
+  const r = await runFridayWhaleKickoff({}, {
+    soql: async () => [
+      { Id: "003w1", Name: "VIP Partner", FirstName: "VIP", LastName: "Partner",
+        Email: "vip@example.com", MobilePhone: "+15305554001", Last_Touch__c: null },
+    ],
+    createDialSession: async ({ contacts }) => ({ dialsession_id: "t-fri", contact_ids: contacts.map((_,i)=>`c${i}`) }),
+  });
+  assert.equal(r.count, 1);
+  return r;
 });
 
 await report("Webhook disposition — VM", async () => {

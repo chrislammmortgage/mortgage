@@ -8,6 +8,8 @@
   "crons": [
     { "path": "/api/cron/monday-realtors",  "schedule": "0 14 * * 1" },
     { "path": "/api/cron/wed-kickoff",      "schedule": "30 15 * * 3" },
-    { "path": "/api/cron/wed-eod",          "schedule": "0 1 * * 4" }
+    { "path": "/api/cron/wed-eod",          "schedule": "0 1 * * 4" },
+    { "path": "/api/cron/thu-kickoff",      "schedule": "30 15 * * 4" },
+    { "path": "/api/cron/fri-kickoff",      "schedule": "30 15 * * 5" }
   ]
 }

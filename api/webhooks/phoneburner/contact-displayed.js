@@ -1,16 +1,9 @@
 // Fired by PhoneBurner when a dial session loads & displays a contact.
 // Will use this in v1 to refresh the contact's live Salesforce data in the
 // dialer view (latest scenario, last touch, agent name) just-in-time.
+// Full payload captured to Vercel runtime logs as PB_CONTACT_DISPLAYED_RAW.
 export default async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).json({ ok: false, error: "POST only" });
-  try {
-    const p = req.body || {};
-    console.log("contact-displayed", {
-      callId: p.call_id, sfId: p.contact?.custom_data?.sf_id,
-      theme: p.contact?.custom_data?.theme,
-    });
-    res.status(200).json({ ok: true, logged: true });
-  } catch (e) {
-    res.status(500).json({ ok: false, error: e.message });
-  }
+  console.log("PB_CONTACT_DISPLAYED_RAW", JSON.stringify({ body: req.body }));
+  res.status(200).json({ ok: true, logged: true });
 }

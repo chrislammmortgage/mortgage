@@ -126,9 +126,43 @@ export async function findRecentPreApprovals({ limit = 10, assignedTo = null } =
 }
 
 export async function findClients({ limit = 1000 } = {}) {
-  return soql(`SELECT Id, Name, MailingStreet, MailingCity, MailingState, MailingPostalCode,
-    Email, MobilePhone, Phone, npe01__HomeEmail__c
+  return soql(`SELECT Id, Name, FirstName, LastName, MailingStreet, MailingCity,
+    MailingState, MailingPostalCode, Email, MobilePhone, Phone, npe01__HomeEmail__c,
+    Closing_Date__c
     FROM Contact WHERE Group__c = 'Client' LIMIT ${limit}`);
+}
+
+// Thursday — Past clients to call this week.
+// Segments per PAS SOP §EA Manual §3:
+//   1st Thursday of month → Annual Reviews (closings prev year, same month).
+//   Other Thursdays → previous-month closings, then Top 50 PCs.
+export async function findPastClientsForThursday({ limit = 20 } = {}) {
+  const today = new Date();
+  const firstThu = isFirstThursdayOfMonth(today);
+  const month = today.getMonth() + 1;
+  const lastYear = today.getFullYear() - 1;
+  const prevMonth = month === 1 ? 12 : month - 1;
+  const prevMonthYear = month === 1 ? lastYear : today.getFullYear();
+  const F = config.sf.fields;
+  const base = `SELECT Id, Name, FirstName, LastName, Email, MobilePhone, Phone,
+    MailingStreet, MailingCity, MailingState, MailingPostalCode, Closing_Date__c,
+    ${F.lastTouch}`;
+  if (firstThu) {
+    const q = `${base} FROM Contact
+      WHERE Group__c = 'Client' AND CALENDAR_YEAR(Closing_Date__c) = ${lastYear}
+      AND CALENDAR_MONTH(Closing_Date__c) = ${month}
+      ORDER BY ${F.lastTouch} ASC NULLS FIRST LIMIT ${limit}`;
+    return { segment: "annual_review", records: await soql(q) };
+  }
+  const q = `${base} FROM Contact
+    WHERE Group__c = 'Client' AND CALENDAR_YEAR(Closing_Date__c) = ${prevMonthYear}
+    AND CALENDAR_MONTH(Closing_Date__c) = ${prevMonth}
+    ORDER BY ${F.lastTouch} ASC NULLS FIRST LIMIT ${limit}`;
+  return { segment: "prev_month_closings", records: await soql(q) };
+}
+
+function isFirstThursdayOfMonth(d) {
+  return d.getDay() === 4 && d.getDate() <= 7;
 }
 
 export async function updateLastTouch(contactId, note) {
