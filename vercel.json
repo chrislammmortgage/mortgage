@@ -1,0 +1,13 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "buildCommand": "vite build",
+  "outputDirectory": "dist",
+  "functions": {
+    "api/**/*.js": { "maxDuration": 30 }
+  },
+  "crons": [
+    { "path": "/api/cron/monday-realtors",  "schedule": "0 14 * * 1" },
+    { "path": "/api/cron/wed-kickoff",      "schedule": "30 15 * * 3" },
+    { "path": "/api/cron/wed-eod",          "schedule": "0 1 * * 4" }
+  ]
+}

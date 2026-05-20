@@ -31,6 +31,7 @@ export const config = {
     },
   },
   pb: {
+    accessToken: process.env.PHONEBURNER_ACCESS_TOKEN,
     clientId: process.env.PHONEBURNER_CLIENT_ID,
     clientSecret: process.env.PHONEBURNER_CLIENT_SECRET,
     refreshToken: process.env.PHONEBURNER_REFRESH_TOKEN,

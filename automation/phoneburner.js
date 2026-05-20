@@ -1,13 +1,28 @@
 import axios from "axios";
 import { config, log } from "./config.js";
 
+// PhoneBurner auth — supports two modes:
+//   1. Personal Access Token (recommended for this build) — set
+//      PHONEBURNER_ACCESS_TOKEN to the token from
+//      Settings → Integrations → Personal Access Tokens.
+//   2. OAuth2 refresh-token flow — fallback when a multi-user OAuth app is
+//      required (Custom Applications). Set PHONEBURNER_CLIENT_ID/SECRET/
+//      REFRESH_TOKEN.
+
 let _token = null;
 let _tokenExp = 0;
 
 async function token() {
+  // PAT mode (simple, preferred)
+  if (config.pb.accessToken) return config.pb.accessToken;
+
+  // OAuth refresh mode
   if (_token && Date.now() < _tokenExp - 60000) return _token;
   if (!config.pb.clientId || !config.pb.refreshToken) {
-    throw new Error("PhoneBurner creds missing");
+    throw new Error(
+      "PhoneBurner auth missing — set PHONEBURNER_ACCESS_TOKEN (preferred), "
+      + "or PHONEBURNER_CLIENT_ID + PHONEBURNER_REFRESH_TOKEN for full OAuth."
+    );
   }
   const res = await axios.post(
     `${config.pb.baseUrl}oauth2/token`,
@@ -42,21 +57,18 @@ async function pb(path, opts = {}) {
   }
 }
 
-export async function whoami() {
-  return pb("members/me");
-}
+export async function whoami() { return pb("members/me"); }
 
 /**
  * Build a dial session in PhoneBurner from a list of contacts.
- * contacts: [{ first_name, last_name, phone, email, custom: { ... } }]
- * Returns: { dialsession_id, contact_ids }
+ * contacts: [{ firstName, lastName, phone, email, custom: {...} }]
  */
 export async function createDialSession({ name, contacts, folderId }) {
   if (config.dryRun) {
     log.info({ name, count: contacts.length }, "[DRY_RUN] createDialSession");
     return { dialsession_id: "dryrun-" + Date.now(), contact_ids: contacts.map((_, i) => `dry-${i}`) };
   }
-  // 1. Upload contacts (PhoneBurner accepts arrays)
+  // 1. Bulk-create contacts. PhoneBurner accepts arrays per the API.
   const created = await pb("contacts", {
     method: "POST",
     body: contacts.map(c => ({
@@ -70,7 +82,7 @@ export async function createDialSession({ name, contacts, folderId }) {
   });
   const contact_ids = (created.contacts || created).map(x => x.id);
 
-  // 2. Build dial session
+  // 2. Build the dial session.
   const session = await pb("dialsession", {
     method: "POST",
     body: { name, contact_ids },
@@ -78,18 +90,16 @@ export async function createDialSession({ name, contacts, folderId }) {
   return { dialsession_id: session.id || session.dialsession_id, contact_ids };
 }
 
-export async function getCallResult(callId) {
-  return pb(`calls/${callId}`);
-}
+export async function getCallResult(callId) { return pb(`calls/${callId}`); }
 
 /**
- * PhoneBurner webhook payload shape (representative):
- * {
- *   event: "call.completed",
- *   call_id, contact: { id, first_name, last_name, phone, custom_data: { sf_id } },
- *   disposition: "VM" | "Connected" | "Bad Number" | ...,
- *   recording_url, transcript, duration_seconds, member_id, dialsession_id
- * }
+ * PhoneBurner webhook payload — configured under Settings → Integrations →
+ * Webhooks. Set the URL to https://<vercel-host>/api/webhooks/phoneburner.
+ * Payload (representative):
+ *   { event, call_id, contact: { id, first_name, last_name, phone,
+ *       custom_data: { sf_id, theme } },
+ *     disposition, recording_url, transcript, duration_seconds,
+ *     member_id, dialsession_id, completed_at }
  */
 export function parseWebhook(payload) {
   return {
