@@ -5,11 +5,19 @@
   "functions": {
     "api/**/*.js": { "maxDuration": 30 }
   },
+  "rewrites": [
+    { "source": "/api/webhooks/phoneburner/:event", "destination": "/api/webhooks/phoneburner?event=:event" },
+    { "source": "/api/preview/:type",               "destination": "/api/preview?type=:type" },
+    { "source": "/api/diagnostics/:service",        "destination": "/api/diagnostics?service=:service" },
+    { "source": "/api/cron/:job",                   "destination": "/api/cron?job=:job" },
+    { "source": "/briefing",                        "destination": "/api/briefing" },
+    { "source": "/setup",                           "destination": "/setup.html" }
+  ],
   "crons": [
-    { "path": "/api/cron/monday-realtors",  "schedule": "0 14 * * 1" },
-    { "path": "/api/cron/wed-kickoff",      "schedule": "30 15 * * 3" },
-    { "path": "/api/cron/wed-eod",          "schedule": "0 1 * * 4" },
-    { "path": "/api/cron/thu-kickoff",      "schedule": "30 15 * * 4" },
-    { "path": "/api/cron/fri-kickoff",      "schedule": "30 15 * * 5" }
+    { "path": "/api/cron?job=monday-realtors",  "schedule": "0 14 * * 1" },
+    { "path": "/api/cron?job=wed-kickoff",      "schedule": "30 15 * * 3" },
+    { "path": "/api/cron?job=wed-eod",          "schedule": "0 1 * * 4" },
+    { "path": "/api/cron?job=thu-kickoff",      "schedule": "30 15 * * 4" },
+    { "path": "/api/cron?job=fri-kickoff",      "schedule": "30 15 * * 5" }
   ]
 }
