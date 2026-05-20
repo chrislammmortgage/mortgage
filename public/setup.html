@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Theme Day Call Automation — Setup</title>
+<style>
+  body { font-family: -apple-system, "DM Sans", system-ui, sans-serif; max-width: 820px; margin: 32px auto; padding: 0 20px; color: #222; line-height: 1.55; background: #f5f5f5; }
+  h1 { color: #02b2da; margin-bottom: 4px; font-size: 26px; }
+  .sub { color: #888; margin-top: 0; font-size: 13px; }
+  h2 { margin-top: 36px; font-size: 18px; color: #404040; border-bottom: 1px solid #ddd; padding-bottom: 6px; }
+  .card { background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 16px 20px; margin: 14px 0; }
+  .card h3 { margin: 0 0 8px; font-size: 12px; color: #888; text-transform: uppercase; letter-spacing: .06em; }
+  .card a, .card a:visited { color: #02b2da; text-decoration: none; font-weight: 600; }
+  .card a:hover { text-decoration: underline; }
+  code { background: #f5f5f5; padding: 2px 6px; border-radius: 4px; font-size: 12.5px; font-family: ui-monospace, Menlo, monospace; word-break: break-all; }
+  .pill { display: inline-block; padding: 2px 8px; border-radius: 3px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; }
+  .live { background: #e8f5e9; color: #2D7D46; }
+  .pending { background: #fff3e0; color: #e65100; }
+  .err { background: #ffebee; color: #c62828; }
+  ol li { margin: 6px 0; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+  .grid .card { margin: 0; }
+  @media (max-width: 700px) { .grid { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<h1>Theme Day Call Automation</h1>
+<p class="sub">MortgageOne · Team Lamm · v0.5 (route to owner only) · <a href="/" style="color:#02b2da">← back to the loan calculator</a></p>
+
+<h2>Live previews of the emails</h2>
+<div class="grid">
+  <div class="card"><h3>Wed 8 AM checklist</h3>
+    <p style="font-size:13px;color:#555;margin:0 0 8px">What Zak / Jen / Toni each get Wednesday morning. v0.5 routes all of them to you first.</p>
+    <a href="/api/preview/checklist?for=zak@chrislamm.com">Open →</a></div>
+  <div class="card"><h3>PA check-in (client)</h3>
+    <p style="font-size:13px;color:#555;margin:0 0 8px">Drafted automatically after a VM / no-answer during a pre-approval dial set.</p>
+    <a href="/api/preview/preapproval">Open →</a></div>
+  <div class="card"><h3>Realtor VM follow-up</h3>
+    <p style="font-size:13px;color:#555;margin:0 0 8px">Mon Power Hour follow-up — value-based, includes capture-rate stats.</p>
+    <a href="/api/preview/realtor-vm">Open →</a></div>
+</div>
+
+<h2>Connect the services</h2>
+
+<div class="card">
+  <h3>1. PhoneBurner <span class="pill pending">action needed</span></h3>
+  <ol>
+    <li>You've already generated the Personal Access Token.</li>
+    <li><strong>Add the token to Vercel:</strong> Vercel project → Settings → Environment Variables → add <code>PHONEBURNER_ACCESS_TOKEN</code> = your token. Save, then click "Redeploy" on the latest deployment.</li>
+    <li><strong>Whitelist the egress.</strong> When I just tried the token from outside, PhoneBurner returned <code>"Host not in allowlist"</code> — your account restricts which IPs may hit the API. In PhoneBurner My Account / Integrations, either turn off the API IP allowlist or add Vercel's IP range. The simplest: turn it off (the Bearer token is still the secret).</li>
+    <li><strong>Webhook:</strong> Settings → Integrations → <strong>Webhooks</strong> → add a webhook for the "Call Completed" event pointing at <code id="webhook-url">/api/webhooks/phoneburner</code> on this host.</li>
+    <li>After all that, hit <a href="/api/diagnostics/pb">/api/diagnostics/pb</a> — it should return your member identity and folder list.</li>
+  </ol>
+</div>
+
+<div class="card">
+  <h3>2. Salesforce Connected App <span class="pill pending">action needed</span></h3>
+  <ol>
+    <li>SF Setup → App Manager → New Connected App.</li>
+    <li>Enable OAuth Settings. Callback URL: <code id="sf-callback">/api/oauth/salesforce/callback</code> on this host.</li>
+    <li>Selected OAuth Scopes: <code>api</code>, <code>refresh_token</code> &amp; <code>offline_access</code>.</li>
+    <li>Save. Wait ~10 minutes for the app to be created.</li>
+    <li>Capture Consumer Key + Consumer Secret. Paste into Vercel env: <code>SF_CLIENT_ID</code> + <code>SF_CLIENT_SECRET</code>. Redeploy.</li>
+    <li>Click <a href="/api/oauth/salesforce/start">Authorize Salesforce →</a>. The callback page shows you a refresh token; paste that into Vercel as <code>SF_REFRESH_TOKEN</code> + <code>SF_INSTANCE_URL</code>, redeploy one more time.</li>
+    <li>Verify with <a href="/api/diagnostics/sf">/api/diagnostics/sf</a> — should return your real user identity + a live Contact query.</li>
+  </ol>
+</div>
+
+<h2>System status</h2>
+<div class="card">
+  <p><a href="/api/health">/api/health</a> — JSON status. <code>hasSalesforce</code>, <code>hasPhoneBurner</code>, <code>routeToOwnerOnly</code>.</p>
+  <p><a href="/api/diagnostics/sf">/api/diagnostics/sf</a> — live Salesforce identity (once SF env vars are set).</p>
+  <p><a href="/api/diagnostics/pb">/api/diagnostics/pb</a> — live PhoneBurner whoami (once PB env vars are set).</p>
+</div>
+
+<p style="color:#888;font-size:12px;margin-top:40px">
+MortgageOne Inc · NMLS #898812 · Chris Lamm, Branch Manager · NMLS #209221 · Equal Housing Lender
+</p>
+
+<script>
+  // Make the URLs absolute so people can copy/paste them into PB / SF.
+  const host = location.origin;
+  document.getElementById("webhook-url").textContent = host + "/api/webhooks/phoneburner";
+  document.getElementById("sf-callback").textContent = host + "/api/oauth/salesforce/callback";
+</script>
+</body>
+</html>
