@@ -47,6 +47,23 @@ Key facts:
   (generic web fetches 403). A live automation that calls PhoneBurner/Salesforce
   needs to run where it has network + credentials (user machine or a server).
 
+## Realtor identification (verified per user)
+- Realtors live in Salesforce/Jungo identified by **`Group__c`** (values like
+  *Realtor*, *A Realtor*, *Top Realtor*, *Realtor Partner*) — NOT RecordType.
+- Realtor adapter in `automation/salesforce.js` tries Contact+Group →
+  Account+Type → Jungo `Realtor__c` in that order.
+
+## Public-records realtor intel sources (per user direction)
+Try in order, merge best result: Realtor.com, ListReports, Homes.com, Zillow,
+HomeBot, RETR. Implemented via Firecrawl scrape+extract; swap to Trestle/MLSGrid
+API later when budget allows.
+
+## PhoneBurner capabilities (updated)
+- PhoneBurner now has **native recording + transcription** — we do NOT need
+  Whisper/Deepgram bolted on. Webhook payload includes `transcript`.
+
 ## Working agreement
 - Active dev branch: `claude/phone-call-automation-j4iVv`.
 - Do not fabricate CORE Training proprietary content; mark unknowns as TBD.
+- AI **drafts** all outbound emails/SMS/tasks; human approves before they fire.
+- Pre-Approval kickoff runs Wednesdays (this week: tomorrow).

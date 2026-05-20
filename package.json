@@ -1,17 +1,29 @@
 {
   "name": "lamm-mortgage-advisor",
   "private": true,
-  "version": "1.0.0",
+  "version": "1.1.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "automation:server": "node automation/server.js",
+    "automation:cron": "node automation/cron.js",
+    "kickoff:preapproval": "node automation/scripts/run-preapproval-kickoff.js",
+    "kickoff:realtors": "node automation/scripts/run-monday-realtors.js",
+    "eod:enforce": "node automation/scripts/run-eod-enforcement.js"
   },
   "dependencies": {
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
-    "recharts": "^2.12.0"
+    "recharts": "^2.12.0",
+    "axios": "^1.7.7",
+    "dotenv": "^16.4.5",
+    "express": "^4.21.1",
+    "jsforce": "^3.6.3",
+    "node-cron": "^3.0.3",
+    "p-limit": "^6.1.0",
+    "pino": "^9.5.0"
   },
   "devDependencies": {
     "@types/react": "^18.2.0",
