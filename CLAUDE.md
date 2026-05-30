@@ -8,10 +8,11 @@ This repository is a mortgage origination assistant that contextualizes loan gui
 - Investors include: ARC, Onsloh, Deephaven, Acra Lending, A&D Mortgage, Newrez, and others
 
 ## Structure
-- `guidelines/` -- Investor-specific and product-specific guideline references
-- `templates/` -- Reusable document templates (business narratives, needs lists, etc.)
-- `emails/` -- Client and referral partner email drafts
-- `App.jsx` / `index.html` -- Future web application for guideline lookup and email generation
+- `loan-ops/` -- All mortgage business content (kept separate from app code)
+  - `loan-ops/guidelines/` -- Investor-specific and product-specific guideline references
+  - `loan-ops/templates/` -- Reusable document templates (business narratives, needs lists, etc.)
+  - `loan-ops/emails/` -- Client and referral partner email drafts
+- `App.jsx` / `index.html` -- Web application for guideline lookup and email generation
 
 ## Key Conventions
 - Always refer to bank statement loans as "portfolio loans" in client-facing content
